@@ -133,7 +133,10 @@
         <h1>Incidencias de equipos</h1>
         <p>IES Zaframagón · Ordenadores y pizarras digitales</p>
       </div>
-      <span class="modo" id="modo">Conectando…</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span class="modo" id="modo">Conectando…</span>
+        <button type="button" class="modo" id="btn-gestor" hidden style="background:transparent;color:inherit;cursor:pointer;font:inherit;font-size:.85rem">Acceso gestor</button>
+      </div>
     </div>
     <nav role="tablist" aria-label="Secciones">
       <button role="tab" id="tab-nueva" aria-selected="true" aria-controls="p-nueva">Nueva incidencia</button>
@@ -242,6 +245,12 @@
     "Otro": ["No enciende","No funciona bien","Otro"]
   };
   var LS_KEY = "incidencias-zaframagon-v1";
+  var KEY_LS = "incidencias-clave-gestor";
+
+  // ▼ Pega aquí la URL de la aplicación web de Apps Script (termina en /exec).
+  //   Si la dejas vacía, la página guarda las incidencias solo en el navegador de cada persona.
+  var URL_SCRIPT = "";
+  var POLL_MS = 30000; // cada cuánto se refresca el registro (ms)
 
   var $ = function(id){return document.getElementById(id)};
   function h(tag, attrs, kids){
@@ -263,33 +272,50 @@
   var S = { items:[], mode:"pending", gestor:false, me:null, user:null, dl:null,
             fEstado:"abiertas", fTipo:"", q:"", open:{}, nuevo:null };
 
-  /* ---------- Almacén: base compartida o navegador ---------- */
+  /* ---------- Almacén: Google Sheets (Apps Script) o navegador ---------- */
+  function keyGet(){ try{ return localStorage.getItem(KEY_LS)||""; }catch(e){ return ""; } }
+  function keySet(v){ try{ if(v) localStorage.setItem(KEY_LS,v); else localStorage.removeItem(KEY_LS); }catch(e){} }
+
   var Store = {
-    col:null,
-    async init(){
-      var db = null;
-      if(window.claude && typeof window.claude.use==="function"){
-        try{
-          db = await Promise.race([window.claude.use("db"), new Promise(function(r){setTimeout(function(){r(null)},6000)})]);
-        }catch(e){ db = null; }
+    sig:"",
+    async call(payload){
+      var j;
+      try{
+        var res = await fetch(URL_SCRIPT, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(payload)});
+        j = await res.json();
+      }catch(e){ throw {code:"red"}; }
+      if(!j || !j.ok){
+        var c = (j && j.error) || "servidor";
+        if(c==="clave"){ keySet(""); S.gestor = false; pintaGestorBtn(); render(); }
+        throw {code:c};
       }
-      if(db){
-        S.mode = "shared";
-        this.col = db.collection("incidencias");
-        try{ S.user = await window.claude.use("user"); }catch(e){}
-        try{ S.dl = await window.claude.use("downloads"); }catch(e){}
-        if(S.user){
-          try{
-            S.me = await S.user.me();
-            S.gestor = (await S.user.canEdit()) || (await S.user.isOwner());
-          }catch(e){}
+      return j;
+    },
+    async refresh(force){
+      try{
+        var res = await fetch(URL_SCRIPT+"?action=list&t="+Date.now());
+        var j = await res.json();
+        if(!j || !j.ok) throw 0;
+        var sig = JSON.stringify(j.items);
+        if(!force && S.mode==="remote"){
+          if(sig===this.sig) return;
+          var ae = document.activeElement;
+          if(ae && ae.closest && ae.closest(".manage")) return; // no pisar lo que se está escribiendo
         }
-        this.col.orderBy("creado","desc").limit(1000).onSnapshot(function(snap){
-          S.items = snap.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; });
-          render();
-        }, function(err){
-          S.mode = "error"; setModo(); render();
-        });
+        this.sig = sig;
+        S.items = j.items.sort(function(a,b){return b.creado-a.creado});
+        if(S.mode!=="remote"){ S.mode = "remote"; setModo(); }
+        render();
+      }catch(e){
+        if(S.mode!=="remote"){ S.mode = "error"; setModo(); render(); }
+      }
+    },
+    async init(){
+      if(URL_SCRIPT){
+        S.gestor = !!keyGet();
+        await this.refresh(true);
+        setInterval(function(){ if(!document.hidden) Store.refresh(false); }, POLL_MS);
+        document.addEventListener("visibilitychange", function(){ if(!document.hidden) Store.refresh(false); });
       } else {
         S.mode = "local"; S.gestor = true;
         this.loadLocal(); render();
@@ -304,38 +330,53 @@
       try{ localStorage.setItem(LS_KEY, JSON.stringify(S.items)); }catch(e){ throw {code:"storage"}; }
     },
     async add(data){
-      if(S.mode==="shared"){
-        var ref = this.col.doc();
-        await ref.set(data);
-        return ref.id;
+      if(S.mode==="remote"){
+        var j = await this.call({action:"add", item:data});
+        await this.refresh(true);
+        return j.id;
       }
       var id = Date.now().toString(36)+Math.random().toString(36).slice(2,6);
       data.id = id; S.items.unshift(data); this.saveLocal(); return id;
     },
     async update(id, patch){
-      if(S.mode==="shared"){ await this.col.doc(id).update(patch); return; }
+      if(S.mode==="remote"){
+        await this.call({action:"update", id:id, patch:patch, clave:keyGet()});
+        await this.refresh(true); return;
+      }
       var it = S.items.find(function(x){return x.id===id}); if(it) Object.assign(it, patch);
       this.saveLocal();
     },
     async remove(id){
-      if(S.mode==="shared"){ await this.col.doc(id).delete(); return; }
+      if(S.mode==="remote"){
+        await this.call({action:"remove", id:id, clave:keyGet()});
+        await this.refresh(true); return;
+      }
       S.items = S.items.filter(function(x){return x.id!==id}); this.saveLocal();
     }
   };
 
   function setModo(){
     var m = $("modo");
-    if(S.mode==="shared") m.textContent = "Registro compartido";
+    if(S.mode==="remote") m.textContent = "Registro compartido";
     else if(S.mode==="local") m.textContent = "Guardado en este navegador";
     else if(S.mode==="error") m.textContent = "Sin conexión con el registro";
     else m.textContent = "Conectando…";
+    pintaGestorBtn();
   }
 
   function errTxt(e){
-    if(e && e.code==="invalid_argument") return "No tienes permiso de escritura. Pide que te den acceso como colaborador.";
-    if(e && e.code==="quota_exceeded") return "El registro está lleno. Hay que borrar incidencias antiguas.";
-    if(e && e.code==="storage") return "El navegador no deja guardar datos (¿modo privado?).";
+    var c = e && e.code;
+    if(c==="clave") return "Clave de gestor incorrecta.";
+    if(c==="red") return "No hay conexión con el registro. Inténtalo de nuevo.";
+    if(c==="ocupado") return "El registro está ocupado. Inténtalo de nuevo en unos segundos.";
+    if(c==="storage") return "El navegador no deja guardar datos (¿modo privado?).";
     return "No se pudo guardar. Inténtalo de nuevo en unos segundos.";
+  }
+
+  function pintaGestorBtn(){
+    var b = $("btn-gestor");
+    b.hidden = S.mode!=="remote";
+    b.textContent = S.gestor ? "Salir de gestor" : "Acceso gestor";
   }
 
   /* ---------- Pestañas ---------- */
@@ -408,7 +449,7 @@
       antes: $("antes").checked,
       estado: estadoIni,
       nota: "",
-      historial: [{ts: Date.now(), estado: estadoIni, by: (S.me && S.me.id) || null}],
+      historial: [{ts: Date.now(), estado: estadoIni, por: $("prof").value.trim()}],
       autor: (S.me && S.me.id) || null
     };
     try{
@@ -531,7 +572,7 @@
       body.appendChild(dl);
       var hist = h("ul",{class:"hist","aria-label":"Historial de estados"});
       (it.historial||[]).forEach(function(x){
-        hist.appendChild(h("li",{text:fmt(x.ts)+" — "+x.estado+" ("+quien(x.by)+")"+(x.nota?": "+x.nota:"")}));
+        hist.appendChild(h("li",{text:fmt(x.ts)+" — "+x.estado+" ("+(x.por||quien(x.by))+")"+(x.nota?": "+x.nota:"")}));
       });
       body.appendChild(hist);
 
@@ -576,7 +617,7 @@
     var actual = S.items.find(function(x){return x.id===it.id}) || it;
     if(estado===actual.estado && nota===(actual.nota||"")){ btn.textContent = "Sin cambios"; setTimeout(function(){btn.textContent="Guardar cambio"},1500); return; }
     var hist = (actual.historial||[]).slice();
-    hist.push({ts:Date.now(), estado:estado, by:(S.me&&S.me.id)||null, nota: nota!==(actual.nota||"") ? nota : ""});
+    hist.push({ts:Date.now(), estado:estado, by:null, por:"Gestor", nota: nota!==(actual.nota||"") ? nota : ""});
     btn.disabled = true;
     try{
       await Store.update(it.id, {estado:estado, nota:nota, historial:hist});
@@ -639,6 +680,14 @@
         setTimeout(function(){URL.revokeObjectURL(url)},1000);
       }
     }catch(e){ if(!e || e.code!=="declined"){ b.textContent = "No se pudo exportar"; setTimeout(function(){b.textContent=orig},2000); } }
+  });
+
+  $("btn-gestor").addEventListener("click", async function(){
+    if(S.gestor){ keySet(""); S.gestor = false; pintaGestorBtn(); render(); return; }
+    var k = window.prompt("Clave de gestor:");
+    if(!k) return;
+    try{ await Store.call({action:"auth", clave:k}); keySet(k); S.gestor = true; pintaGestorBtn(); render(); }
+    catch(e){ window.alert(errTxt(e)); }
   });
 
   /* ---------- Arranque ---------- */
