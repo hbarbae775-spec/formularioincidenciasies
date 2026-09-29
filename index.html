@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Incidencias TIC · IES Zaframagón</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    --board:#22443c; --board-ink:#eef4f1;
+    --paper:#ffffff; --bg:#eef1f0; --ink:#16211e; --muted:#5b6b66;
+    --line:#c9d2cf; --focus:#2a6fdb; --alert:#b3261e; --ok:#1d6b45; --warn:#8a5a00; --info:#1f5fb4;
+    --radius:6px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#111816; --paper:#18221f; --ink:#e7eeeb; --muted:#93a39d; --line:#33443f;
+      --board:#2b5a4f; --focus:#7aaaf0; --alert:#f08a82; --ok:#6fcf9b; --warn:#f0c26a; --info:#8db8f5;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#111816; --paper:#18221f; --ink:#e7eeeb; --muted:#93a39d; --line:#33443f;
+    --board:#2b5a4f; --focus:#7aaaf0; --alert:#f08a82; --ok:#6fcf9b; --warn:#f0c26a; --info:#8db8f5;
+  }
+  html{scroll-padding-top:env(safe-area-inset-top,0px)}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:16px;line-height:1.5}
+  .wrap{max-width:820px;margin:0 auto}
+  header{background:var(--board);color:var(--board-ink);padding:20px 16px 0}
+  header .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  header h1{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:1.65rem;line-height:1.15;margin:0 0 4px}
+  header p{margin:0;opacity:.85}
+  .modo{font-size:.85rem;border:1px solid rgba(255,255,255,.4);border-radius:999px;padding:3px 12px;white-space:nowrap}
+  nav{display:flex;gap:4px;margin-top:16px}
+  nav button{font:inherit;font-weight:700;background:transparent;color:var(--board-ink);opacity:.8;
+    border:0;border-radius:var(--radius) var(--radius) 0 0;padding:10px 18px;cursor:pointer}
+  nav button[aria-selected="true"]{background:var(--bg);color:var(--ink);opacity:1}
+  .pill{display:inline-block;min-width:1.5em;text-align:center;font-size:.8rem;border-radius:999px;padding:0 7px;margin-left:6px;background:var(--alert);color:#fff}
+  main{padding:18px 16px 56px}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:8px 20px 22px}
+  fieldset{border:0;border-top:1px solid var(--line);margin:0;padding:18px 0 4px}
+  fieldset:first-of-type{border-top:0}
+  legend{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:1.15rem;padding:0 0 8px;float:left;width:100%}
+  legend + *{clear:both}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .field{margin-bottom:14px}
+  label,.lbl{display:block;font-weight:700;margin-bottom:4px}
+  .hint{color:var(--muted);font-weight:400;font-size:.9rem}
+  input[type=text],input[type=date],input[type=time],select,textarea{
+    width:100%;font:inherit;color:inherit;background:var(--paper);
+    border:1.5px solid var(--line);border-radius:var(--radius);padding:10px 12px}
+  textarea{min-height:100px;resize:vertical}
+  :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+  .choices{display:flex;flex-wrap:wrap;gap:8px}
+  .choices label{margin:0;font-weight:400}
+  .choices input{position:absolute;opacity:0;pointer-events:none}
+  .choices span{display:inline-block;border:1.5px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer;user-select:none}
+  .choices input:checked + span{background:var(--board);border-color:var(--board);color:var(--board-ink)}
+  .choices input:focus-visible + span{outline:3px solid var(--focus);outline-offset:2px}
+  .choices.urg input[value="Urgente"]:checked + span{background:var(--alert);border-color:var(--alert);color:#fff}
+  .check{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;font-weight:400}
+  .check input{margin-top:.35em;width:18px;height:18px;accent-color:var(--board)}
+  .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  button.btn{font:inherit;font-weight:700;border-radius:var(--radius);padding:11px 18px;cursor:pointer;border:1.5px solid var(--board);background:var(--paper);color:var(--ink)}
+  button.btn.primary{background:var(--board);color:var(--board-ink)}
+  button.btn.danger{border-color:var(--alert);color:var(--alert)}
+  button.btn.small{padding:7px 12px;font-size:.9rem}
+  .msg{margin-top:12px;min-height:1.5em;font-weight:700;color:var(--ok)}
+  .msg.err{color:var(--alert)}
+  .invalid{border-color:var(--alert)!important}
+
+  /* Registro */
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+  .filters .choices span{padding:5px 12px;font-size:.92rem}
+  .filters select,.filters input[type=text]{width:auto;min-width:150px;padding:7px 10px}
+  .filters .grow{flex:1 1 180px}
+  .count{color:var(--muted);font-size:.92rem;margin:0 0 10px}
+  .empty{background:var(--paper);border:1.5px dashed var(--line);border-radius:var(--radius);padding:28px 20px;text-align:center;color:var(--muted)}
+  .item{background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:var(--radius);margin-bottom:10px}
+  .item.urg{border-left-color:var(--alert)}
+  .item.done{opacity:.72}
+  .item.nuevo{outline:3px solid var(--focus)}
+  .head{all:unset;box-sizing:border-box;display:grid;grid-template-columns:1fr auto;gap:4px 12px;width:100%;padding:12px 16px;cursor:pointer}
+  .head:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
+  .head .t{font-weight:700}
+  .head .s{grid-column:1;color:var(--muted);font-size:.92rem}
+  .head .b{grid-column:2;grid-row:1 / span 2;align-self:center}
+  .badge{display:inline-block;border:1.5px solid currentColor;border-radius:999px;padding:1px 11px;font-size:.85rem;font-weight:700;white-space:nowrap}
+  .badge.e-Abierta{color:var(--alert)}
+  .badge.e-En-curso{color:var(--info)}
+  .badge.e-Pendiente-de-material{color:var(--warn)}
+  .badge.e-Resuelta{color:var(--ok)}
+  .flag{color:var(--alert);font-weight:700}
+  .body{border-top:1px solid var(--line);padding:14px 16px 16px}
+  .body dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:0 0 12px}
+  .body dt{font-weight:700}
+  .body dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+  .hist{margin:0 0 14px;padding-left:18px;color:var(--muted);font-size:.92rem}
+  .manage{background:var(--bg);border-radius:var(--radius);padding:12px 14px}
+  .manage .row{grid-template-columns:200px 1fr}
+  .manage textarea{min-height:64px}
+  @media(max-width:600px){.row,.manage .row{grid-template-columns:1fr}.body dl{grid-template-columns:1fr}}
+
+  #hoja{display:none}
+  @media print{
+    :root{padding:0}
+    body{background:#fff;color:#000}
+    #app{display:none}
+    #hoja{display:block;font-family:Georgia,serif;color:#000}
+    #hoja h1{font-size:1.5rem;border-bottom:2px solid #000;padding-bottom:6px;margin:0 0 12px}
+    #hoja table{width:100%;border-collapse:collapse;margin-bottom:14px}
+    #hoja td{border:1px solid #000;padding:6px 8px;vertical-align:top}
+    #hoja td:first-child{width:28%;font-weight:700}
+    #hoja .res{border:1.5px solid #000;padding:10px 14px;break-inside:avoid}
+    #hoja .res .line{border-bottom:1px solid #000;height:26px}
+    @page{size:A4;margin:14mm}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Incidencias de equipos</h1>
+        <p>IES Zaframagón · Ordenadores y pizarras digitales</p>
+      </div>
+      <span class="modo" id="modo">Conectando…</span>
+    </div>
+    <nav role="tablist" aria-label="Secciones">
+      <button role="tab" id="tab-nueva" aria-selected="true" aria-controls="p-nueva">Nueva incidencia</button>
+      <button role="tab" id="tab-reg" aria-selected="false" aria-controls="p-reg">Registro<span class="pill" id="pill" hidden>0</span></button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- NUEVA -->
+  <section id="p-nueva" role="tabpanel" aria-labelledby="tab-nueva">
+    <form id="f" class="card" novalidate>
+      <fieldset>
+        <legend>Quién avisa</legend>
+        <div class="row">
+          <div class="field">
+            <label for="prof">Profesor/a</label>
+            <input type="text" id="prof" autocomplete="name">
+          </div>
+          <div class="field">
+            <span class="lbl">Fecha y hora</span>
+            <div class="row" style="gap:8px">
+              <input type="date" id="fecha" aria-label="Fecha">
+              <input type="time" id="hora" aria-label="Hora">
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Qué equipo falla</legend>
+        <div class="field">
+          <span class="lbl" id="l-tipo">Tipo de equipo</span>
+          <div class="choices" role="radiogroup" aria-labelledby="l-tipo" id="tipo"></div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="aula">Aula o ubicación</label>
+            <input type="text" id="aula" placeholder="Escribe el aula. Ej.: 2º ESO B, Informática 2, Laboratorio…">
+          </div>
+          <div class="field">
+            <label for="etq">Nº de etiqueta o inventario <span class="hint">(si tiene)</span></label>
+            <input type="text" id="etq">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Qué ocurre</legend>
+        <div class="field">
+          <span class="lbl" id="l-prob">Problema <span class="hint">(marca todos los que apliquen)</span></span>
+          <div class="choices" id="prob" role="group" aria-labelledby="l-prob"></div>
+        </div>
+        <div class="field">
+          <label for="desc">Descripción</label>
+          <textarea id="desc" placeholder="Qué pasó, qué estabas haciendo, si aparece algún mensaje de error…"></textarea>
+        </div>
+        <div class="field">
+          <span class="lbl" id="l-urg">Urgencia</span>
+          <div class="choices urg" role="radiogroup" aria-labelledby="l-urg">
+            <label><input type="radio" name="urg" value="Normal" checked><span>Normal</span></label>
+            <label><input type="radio" name="urg" value="Urgente"><span>Urgente</span></label>
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="impide"> Me impide dar clase con normalidad</label>
+        <label class="check"><input type="checkbox" id="antes"> Ya había pasado antes</label>
+      </fieldset>
+
+      <div class="actions">
+        <button type="submit" class="btn primary" id="btn-reg">Registrar incidencia</button>
+        <button type="reset" class="btn">Vaciar</button>
+      </div>
+      <div class="msg" id="msg" role="status" aria-live="polite"></div>
+    </form>
+  </section>
+
+  <!-- REGISTRO -->
+  <section id="p-reg" role="tabpanel" aria-labelledby="tab-reg" hidden>
+    <div class="filters">
+      <div class="choices" role="radiogroup" aria-label="Filtrar por estado" id="f-estado"></div>
+    </div>
+    <div class="filters">
+      <select id="f-tipo" aria-label="Filtrar por tipo de equipo"><option value="">Todos los equipos</option></select>
+      <input type="text" id="f-q" class="grow" placeholder="Buscar por aula, profesor, descripción…" aria-label="Buscar">
+      <button type="button" class="btn small" id="btn-csv">Exportar CSV</button>
+    </div>
+    <p class="count" id="count" aria-live="polite"></p>
+    <div id="lista"></div>
+  </section>
+</div>
+</main>
+
+<div id="hoja" aria-hidden="true"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var ESTADOS = ["Abierta","En curso","Pendiente de material","Resuelta"];
+  var TIPOS = ["Ordenador de aula","Portátil","Pizarra digital","Proyector","Otro"];
+  var PROBLEMAS = {
+    "Ordenador de aula": ["No enciende","Va muy lento","Se cuelga o se reinicia","Sin Internet","No entra con mi usuario","Falla un programa","Teclado o ratón","Sin sonido","Pantalla","Otro"],
+    "Portátil": ["No enciende","No carga","Va muy lento","Sin wifi","Pantalla","Teclado o touchpad","Falla un programa","Otro"],
+    "Pizarra digital": ["No responde al tacto/lápiz","Está desalineada (calibrar)","No muestra imagen","Sin sonido","Falla el software","No se conecta al ordenador","Otro"],
+    "Proyector": ["No enciende","Sin imagen","Imagen borrosa o con manchas","Aviso de lámpara/filtro","Mando o HDMI","Otro"],
+    "Otro": ["No enciende","No funciona bien","Otro"]
+  };
+  var LS_KEY = "incidencias-zaframagon-v1";
+
+  var $ = function(id){return document.getElementById(id)};
+  function h(tag, attrs, kids){
+    var e = document.createElement(tag);
+    if(attrs) Object.keys(attrs).forEach(function(k){
+      if(k==="class") e.className = attrs[k];
+      else if(k==="text") e.textContent = attrs[k];
+      else if(k.slice(0,2)==="on") e.addEventListener(k.slice(2), attrs[k]);
+      else if(attrs[k]!==false && attrs[k]!==null && attrs[k]!==undefined) e.setAttribute(k, attrs[k]);
+    });
+    (kids||[]).forEach(function(c){ if(c) e.appendChild(typeof c==="string" ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function pad(n){return String(n).padStart(2,"0")}
+  function fmt(ts){ return new Date(ts).toLocaleString("es-ES",{dateStyle:"short",timeStyle:"short"}); }
+  function slug(s){ return s.replace(/\s+/g,"-"); }
+
+  /* ---------- Estado global ---------- */
+  var S = { items:[], mode:"pending", gestor:false, me:null, user:null, dl:null,
+            fEstado:"abiertas", fTipo:"", q:"", open:{}, nuevo:null };
+
+  /* ---------- Almacén: base compartida o navegador ---------- */
+  var Store = {
+    col:null,
+    async init(){
+      var db = null;
+      if(window.claude && typeof window.claude.use==="function"){
+        try{
+          db = await Promise.race([window.claude.use("db"), new Promise(function(r){setTimeout(function(){r(null)},6000)})]);
+        }catch(e){ db = null; }
+      }
+      if(db){
+        S.mode = "shared";
+        this.col = db.collection("incidencias");
+        try{ S.user = await window.claude.use("user"); }catch(e){}
+        try{ S.dl = await window.claude.use("downloads"); }catch(e){}
+        if(S.user){
+          try{
+            S.me = await S.user.me();
+            S.gestor = (await S.user.canEdit()) || (await S.user.isOwner());
+          }catch(e){}
+        }
+        this.col.orderBy("creado","desc").limit(1000).onSnapshot(function(snap){
+          S.items = snap.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; });
+          render();
+        }, function(err){
+          S.mode = "error"; setModo(); render();
+        });
+      } else {
+        S.mode = "local"; S.gestor = true;
+        this.loadLocal(); render();
+      }
+      setModo();
+    },
+    loadLocal(){
+      try{ S.items = JSON.parse(localStorage.getItem(LS_KEY)||"[]"); }catch(e){ S.items = []; }
+      S.items.sort(function(a,b){return b.creado-a.creado});
+    },
+    saveLocal(){
+      try{ localStorage.setItem(LS_KEY, JSON.stringify(S.items)); }catch(e){ throw {code:"storage"}; }
+    },
+    async add(data){
+      if(S.mode==="shared"){
+        var ref = this.col.doc();
+        await ref.set(data);
+        return ref.id;
+      }
+      var id = Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      data.id = id; S.items.unshift(data); this.saveLocal(); return id;
+    },
+    async update(id, patch){
+      if(S.mode==="shared"){ await this.col.doc(id).update(patch); return; }
+      var it = S.items.find(function(x){return x.id===id}); if(it) Object.assign(it, patch);
+      this.saveLocal();
+    },
+    async remove(id){
+      if(S.mode==="shared"){ await this.col.doc(id).delete(); return; }
+      S.items = S.items.filter(function(x){return x.id!==id}); this.saveLocal();
+    }
+  };
+
+  function setModo(){
+    var m = $("modo");
+    if(S.mode==="shared") m.textContent = "Registro compartido";
+    else if(S.mode==="local") m.textContent = "Guardado en este navegador";
+    else if(S.mode==="error") m.textContent = "Sin conexión con el registro";
+    else m.textContent = "Conectando…";
+  }
+
+  function errTxt(e){
+    if(e && e.code==="invalid_argument") return "No tienes permiso de escritura. Pide que te den acceso como colaborador.";
+    if(e && e.code==="quota_exceeded") return "El registro está lleno. Hay que borrar incidencias antiguas.";
+    if(e && e.code==="storage") return "El navegador no deja guardar datos (¿modo privado?).";
+    return "No se pudo guardar. Inténtalo de nuevo en unos segundos.";
+  }
+
+  /* ---------- Pestañas ---------- */
+  function go(which){
+    var reg = which==="reg";
+    $("tab-nueva").setAttribute("aria-selected", String(!reg));
+    $("tab-reg").setAttribute("aria-selected", String(reg));
+    $("p-nueva").hidden = reg; $("p-reg").hidden = !reg;
+  }
+  $("tab-nueva").addEventListener("click", function(){go("nueva")});
+  $("tab-reg").addEventListener("click", function(){go("reg")});
+
+  /* ---------- Formulario ---------- */
+  function ahora(){
+    var d = new Date();
+    $("fecha").value = d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+    $("hora").value = pad(d.getHours())+":"+pad(d.getMinutes());
+  }
+  function pintaTipos(){
+    var c = $("tipo");
+    TIPOS.forEach(function(t){
+      var i = h("input",{type:"radio",name:"tipo",value:t});
+      i.addEventListener("change", function(){ pintaProblemas(t); });
+      c.appendChild(h("label",null,[i,h("span",{text:t})]));
+    });
+  }
+  function pintaProblemas(tipo){
+    var c = $("prob"); c.textContent = "";
+    var l = PROBLEMAS[tipo]||[];
+    if(!l.length){ c.appendChild(h("span",{class:"hint",text:"Elige primero el tipo de equipo."})); return; }
+    l.forEach(function(p){
+      c.appendChild(h("label",null,[h("input",{type:"checkbox",value:p}),h("span",{text:p})]));
+    });
+  }
+  function resetForm(){
+    setTimeout(function(){ ahora(); pintaProblemas(""); $("msg").textContent=""; if(S.me && S.me.name) $("prof").value = S.me.name; },0);
+  }
+  $("f").addEventListener("reset", resetForm);
+
+  function valida(){
+    var ok = true;
+    ["prof","aula","desc"].forEach(function(id){
+      var bad = !$(id).value.trim();
+      $(id).classList.toggle("invalid", bad); if(bad) ok = false;
+    });
+    if(!document.querySelector('input[name="tipo"]:checked')) ok = false;
+    if(!ok){ msg("Faltan datos: revisa nombre, tipo de equipo, aula y descripción.", true); }
+    return ok;
+  }
+  function msg(t, err){ var m=$("msg"); m.className = "msg"+(err?" err":""); m.textContent = t; }
+
+  $("f").addEventListener("submit", async function(ev){
+    ev.preventDefault();
+    if(!valida()) return;
+    var btn = $("btn-reg"); btn.disabled = true;
+    var f = $("fecha").value.split("-"), t = $("hora").value.split(":");
+    var creado = new Date(+f[0], +f[1]-1, +f[2], +(t[0]||0), +(t[1]||0)).getTime();
+    if(isNaN(creado)) creado = Date.now();
+    var estadoIni = "Abierta";
+    var data = {
+      creado: creado,
+      prof: $("prof").value.trim(),
+      tipo: document.querySelector('input[name="tipo"]:checked').value,
+      aula: $("aula").value.trim(),
+      etq: $("etq").value.trim(),
+      probs: Array.prototype.map.call(document.querySelectorAll("#prob input:checked"), function(i){return i.value}),
+      desc: $("desc").value.trim(),
+      urg: document.querySelector('input[name="urg"]:checked').value,
+      impide: $("impide").checked,
+      antes: $("antes").checked,
+      estado: estadoIni,
+      nota: "",
+      historial: [{ts: Date.now(), estado: estadoIni, by: (S.me && S.me.id) || null}],
+      autor: (S.me && S.me.id) || null
+    };
+    try{
+      var id = await Store.add(data);
+      S.nuevo = id; S.open[id] = true; S.fEstado = "abiertas"; S.fTipo = ""; S.q = "";
+      $("f-q").value = ""; $("f-tipo").value = "";
+      $("f").reset();
+      msg("Incidencia registrada.");
+      render(); go("reg");
+      setTimeout(function(){ var e = document.querySelector('[data-id="'+id+'"]'); if(e && e.scrollIntoView) e.scrollIntoView({block:"center"}); },50);
+    }catch(e){ msg(errTxt(e), true); }
+    btn.disabled = false;
+  });
+
+  /* ---------- Registro ---------- */
+  function codigo(it){
+    var d = new Date(it.creado);
+    return "INC-"+String(d.getFullYear()).slice(2)+pad(d.getMonth()+1)+pad(d.getDate())+"-"+String(it.id).slice(-4).toUpperCase();
+  }
+  function esAbierta(it){ return it.estado!=="Resuelta"; }
+
+  function textoIncidencia(it){
+    var l = ["INCIDENCIA "+codigo(it)+" · IES Zaframagón",
+      "Fecha: "+fmt(it.creado),
+      "Comunicada por: "+it.prof,
+      "Equipo: "+it.tipo+(it.etq?" (etiqueta "+it.etq+")":""),
+      "Ubicación: "+it.aula,
+      "Problema: "+((it.probs&&it.probs.length)?it.probs.join(", "):"sin especificar"),
+      "Urgencia: "+it.urg+(it.impide?" · impide dar clase con normalidad":""),
+      "Estado: "+it.estado];
+    if(it.antes) l.push("Reincidente: ya había pasado antes");
+    l.push("","Descripción:",it.desc);
+    if(it.nota) l.push("","Actuación / nota:",it.nota);
+    return l.join("\n");
+  }
+
+  function pintaFiltros(){
+    var c = $("f-estado"); c.textContent = "";
+    var opts = [["abiertas","Abiertas"],["todas","Todas"]].concat(ESTADOS.map(function(e){return [e,e]}));
+    opts.forEach(function(o){
+      var i = h("input",{type:"radio",name:"festado",value:o[0]});
+      if(S.fEstado===o[0]) i.checked = true;
+      i.addEventListener("change", function(){ S.fEstado = o[0]; render(); });
+      c.appendChild(h("label",null,[i,h("span",{text:o[1]})]));
+    });
+  }
+  function pintaTiposFiltro(){
+    var s = $("f-tipo");
+    TIPOS.forEach(function(t){ s.appendChild(h("option",{value:t,text:t})); });
+    s.addEventListener("change", function(){ S.fTipo = s.value; render(); });
+    $("f-q").addEventListener("input", function(){ S.q = this.value.trim().toLowerCase(); render(); });
+  }
+
+  function filtra(){
+    return S.items.filter(function(it){
+      if(S.fEstado==="abiertas" && !esAbierta(it)) return false;
+      if(S.fEstado!=="abiertas" && S.fEstado!=="todas" && it.estado!==S.fEstado) return false;
+      if(S.fTipo && it.tipo!==S.fTipo) return false;
+      if(S.q){
+        var hay = [it.aula,it.prof,it.desc,it.etq,it.tipo,(it.probs||[]).join(" "),codigo(it),it.nota||""].join(" ").toLowerCase();
+        if(hay.indexOf(S.q)<0) return false;
+      }
+      return true;
+    });
+  }
+
+  var renderTok = 0;
+  async function render(){
+    var tok = ++renderTok;
+    // pill
+    var nAb = S.items.filter(esAbierta).length;
+    var pill = $("pill"); pill.textContent = nAb; pill.hidden = nAb===0;
+    pintaFiltros();
+
+    // nombres de quien cambió el estado
+    var names = {};
+    if(S.user && S.mode==="shared"){
+      var ids = {};
+      S.items.forEach(function(it){ (it.historial||[]).forEach(function(x){ if(x.by) ids[x.by]=1; }); });
+      var arr = Object.keys(ids);
+      if(arr.length){ try{ names = await S.user.profiles(arr); }catch(e){} }
+      if(tok!==renderTok) return;
+    }
+    var quien = function(id){ return id ? ((names[id] && names[id].name) || "Alguien") : "Alguien"; };
+
+    var lista = filtra();
+    $("count").textContent = lista.length+" de "+S.items.length+" incidencias";
+    var cont = $("lista"); cont.textContent = "";
+    if(S.mode==="pending"){ cont.appendChild(h("div",{class:"empty",text:"Conectando con el registro…"})); return; }
+    if(S.mode==="error"){ cont.appendChild(h("div",{class:"empty",text:"No se puede leer el registro. Recarga la página o comprueba que tienes acceso."})); return; }
+    if(!lista.length){
+      cont.appendChild(h("div",{class:"empty",text: S.items.length ? "Ninguna incidencia coincide con el filtro." : "Todavía no hay incidencias registradas."}));
+      return;
+    }
+    lista.forEach(function(it){ cont.appendChild(tarjeta(it, quien)); });
+  }
+
+  function tarjeta(it, quien){
+    var abierto = !!S.open[it.id];
+    var cls = "item"+(it.urg==="Urgente"&&esAbierta(it)?" urg":"")+(esAbierta(it)?"":" done")+(S.nuevo===it.id?" nuevo":"");
+    var art = h("article",{class:cls,"data-id":it.id});
+    var probs = (it.probs&&it.probs.length)?it.probs.join(", "):"Sin especificar";
+    var head = h("button",{class:"head",type:"button","aria-expanded":String(abierto),onclick:function(){
+      S.open[it.id] = !S.open[it.id]; if(S.nuevo===it.id) S.nuevo=null; render();
+    }},[
+      h("span",{class:"t"},[it.tipo+" · "+it.aula, it.urg==="Urgente"?h("span",{class:"flag",text:"  Urgente"}):null, it.impide?h("span",{class:"flag",text:"  · Impide dar clase"}):null]),
+      h("span",{class:"s",text:codigo(it)+" · "+fmt(it.creado)+" · "+it.prof}),
+      h("span",{class:"b"},[h("span",{class:"badge e-"+slug(it.estado),text:it.estado})])
+    ]);
+    art.appendChild(head);
+    if(abierto){
+      var body = h("div",{class:"body"});
+      var dl = h("dl",null,[
+        h("dt",{text:"Problema"}),h("dd",{text:probs}),
+        h("dt",{text:"Descripción"}),h("dd",{text:it.desc}),
+        it.etq?h("dt",{text:"Etiqueta"}):null, it.etq?h("dd",{text:it.etq}):null,
+        it.antes?h("dt",{text:"Reincidente"}):null, it.antes?h("dd",{text:"Ya había pasado antes"}):null,
+        it.nota?h("dt",{text:"Actuación"}):null, it.nota?h("dd",{text:it.nota}):null
+      ]);
+      body.appendChild(dl);
+      var hist = h("ul",{class:"hist","aria-label":"Historial de estados"});
+      (it.historial||[]).forEach(function(x){
+        hist.appendChild(h("li",{text:fmt(x.ts)+" — "+x.estado+" ("+quien(x.by)+")"+(x.nota?": "+x.nota:"")}));
+      });
+      body.appendChild(hist);
+
+      if(S.gestor){
+        var sel = h("select",{id:"sel-"+it.id,"aria-label":"Estado"});
+        ESTADOS.forEach(function(e){ var o = h("option",{value:e,text:e}); if(e===it.estado) o.selected = true; sel.appendChild(o); });
+        var nota = h("textarea",{id:"nota-"+it.id,placeholder:"Qué se ha hecho, qué falta…","aria-label":"Actuación o nota"}); nota.value = it.nota||"";
+        var m = h("div",{class:"manage"},[
+          h("div",{class:"row"},[
+            h("div",{class:"field"},[h("label",{for:"sel-"+it.id,text:"Estado"}),sel]),
+            h("div",{class:"field"},[h("label",{for:"nota-"+it.id,text:"Actuación / nota"}),nota])
+          ]),
+          h("div",{class:"actions",style:"margin-top:0"},[
+            h("button",{class:"btn primary small",type:"button",onclick:function(ev){ guardaEstado(it, sel.value, nota.value.trim(), ev.currentTarget); }},["Guardar cambio"])
+          ])
+        ]);
+        body.appendChild(m);
+      }
+      var acts = h("div",{class:"actions"},[
+        h("button",{class:"btn small",type:"button",onclick:function(ev){ copia(it, ev.currentTarget); }},["Copiar texto"]),
+        h("button",{class:"btn small",type:"button",onclick:function(){ imprime(it); }},["Imprimir parte"])
+      ]);
+      if(S.gestor) acts.appendChild(borrar(it));
+      body.appendChild(acts);
+      art.appendChild(body);
+    }
+    return art;
+  }
+
+  function borrar(it){
+    var b = h("button",{class:"btn small danger",type:"button"},["Eliminar"]);
+    var armed = false;
+    b.addEventListener("click", async function(){
+      if(!armed){ armed = true; b.textContent = "¿Seguro? Pulsa otra vez"; setTimeout(function(){ armed=false; b.textContent="Eliminar"; },4000); return; }
+      try{ await Store.remove(it.id); delete S.open[it.id]; render(); }
+      catch(e){ b.textContent = errTxt(e); }
+    });
+    return b;
+  }
+
+  async function guardaEstado(it, estado, nota, btn){
+    var actual = S.items.find(function(x){return x.id===it.id}) || it;
+    if(estado===actual.estado && nota===(actual.nota||"")){ btn.textContent = "Sin cambios"; setTimeout(function(){btn.textContent="Guardar cambio"},1500); return; }
+    var hist = (actual.historial||[]).slice();
+    hist.push({ts:Date.now(), estado:estado, by:(S.me&&S.me.id)||null, nota: nota!==(actual.nota||"") ? nota : ""});
+    btn.disabled = true;
+    try{
+      await Store.update(it.id, {estado:estado, nota:nota, historial:hist});
+      btn.textContent = "Guardado";
+      if(S.mode==="local") render();
+    }catch(e){ btn.textContent = errTxt(e); }
+    setTimeout(function(){ btn.disabled=false; btn.textContent="Guardar cambio"; }, 2000);
+  }
+
+  function copia(it, btn){
+    var t = textoIncidencia(it);
+    var ok = function(){ btn.textContent="Copiado"; setTimeout(function(){btn.textContent="Copiar texto"},1500); };
+    var fb = function(){
+      var ta = h("textarea",{style:"position:fixed;opacity:0"}); ta.value = t; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); ok(); }catch(e){ btn.textContent="No se pudo copiar"; }
+      document.body.removeChild(ta);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, fb); else fb();
+  }
+
+  function imprime(it){
+    var hoja = $("hoja"); hoja.textContent = "";
+    hoja.appendChild(h("h1",{text:"Incidencia de equipo · IES Zaframagón"}));
+    var rows = [
+      ["Código", codigo(it)], ["Fecha", fmt(it.creado)], ["Comunicada por", it.prof],
+      ["Equipo", it.tipo+(it.etq?" (etiqueta "+it.etq+")":"")], ["Ubicación", it.aula],
+      ["Problema", (it.probs&&it.probs.length)?it.probs.join(", "):"Sin especificar"],
+      ["Urgencia", it.urg+(it.impide?" · impide dar clase con normalidad":"")+(it.antes?" · reincidente":"")],
+      ["Descripción", it.desc], ["Estado actual", it.estado]
+    ];
+    var tb = h("tbody");
+    rows.forEach(function(r){ tb.appendChild(h("tr",null,[h("td",{text:r[0]}),h("td",{text:r[1],style:"white-space:pre-wrap"})])); });
+    hoja.appendChild(h("table",null,[tb]));
+    var res = h("div",{class:"res"},[
+      h("strong",{text:"A rellenar por el responsable TIC"}),
+      h("p",{text:"Recibido el: ______ / ______ / ______      Resuelto el: ______ / ______ / ______"}),
+      h("p",{text:"Actuación realizada:"}),
+      h("div",{class:"line"}),h("div",{class:"line"}),h("div",{class:"line"}),
+      h("p",{text:"☐ Resuelta     ☐ Pendiente de material     ☐ Requiere servicio técnico externo"})
+    ]);
+    hoja.appendChild(res);
+    window.print();
+  }
+
+  /* ---------- Exportar CSV ---------- */
+  function csvCell(v){ v = String(v==null?"":v).replace(/"/g,'""'); return '"'+v+'"'; }
+  $("btn-csv").addEventListener("click", async function(){
+    var rows = [["Código","Fecha","Profesor/a","Equipo","Aula","Etiqueta","Problemas","Descripción","Urgencia","Impide clase","Reincidente","Estado","Actuación"]];
+    filtra().forEach(function(it){
+      rows.push([codigo(it),fmt(it.creado),it.prof,it.tipo,it.aula,it.etq,(it.probs||[]).join(" / "),it.desc,it.urg,it.impide?"Sí":"No",it.antes?"Sí":"No",it.estado,it.nota||""]);
+    });
+    var txt = "\uFEFF"+rows.map(function(r){return r.map(csvCell).join(";")}).join("\r\n");
+    var name = "incidencias-tic-"+new Date().toISOString().slice(0,10)+".csv";
+    var b = this, orig = b.textContent;
+    try{
+      if(S.dl){ await S.dl.save({filename:name, data:txt}); }
+      else{
+        var url = URL.createObjectURL(new Blob([txt],{type:"text/csv;charset=utf-8"}));
+        var a = h("a",{href:url,download:name}); document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function(){URL.revokeObjectURL(url)},1000);
+      }
+    }catch(e){ if(!e || e.code!=="declined"){ b.textContent = "No se pudo exportar"; setTimeout(function(){b.textContent=orig},2000); } }
+  });
+
+  /* ---------- Arranque ---------- */
+  ahora(); pintaTipos(); pintaProblemas(""); pintaTiposFiltro(); pintaFiltros(); render();
+  Store.init().then(function(){
+    if(S.me && S.me.name && !$("prof").value) $("prof").value = S.me.name;
+  });
+})();
+</script>
+</body>
+</html>
